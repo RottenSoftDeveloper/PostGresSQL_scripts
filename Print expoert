@@ -1,0 +1,36 @@
+import psycopg2
+import csv
+
+
+# Connect to your PostgreSQL database
+conn = psycopg2.connect(
+    dbname="database",
+    user="user",
+    password="password",
+    host="127.0.0.1",
+    port="5432"
+)
+
+
+# Open a cursor to perform database operations
+cur = conn.cursor()
+
+
+# Execute SQL query to select data from your_table
+cur.execute("SELECT * FROM Highgate-Vulnerabilities")
+
+
+# Fetch all rows from the result set
+rows = cur.fetchall()
+
+
+# Write rows to CSV file
+with open('C:\Users\Administrator\Documents\Py scripts\example.csv', 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow([desc[0] for desc in cur.description])  # write headers
+    writer.writerows(rows)
+
+
+# Close cursor and connection
+cur.close()
+conn.close()
