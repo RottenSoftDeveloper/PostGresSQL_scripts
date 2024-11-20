@@ -1,0 +1,63 @@
+import psycopg2
+import time
+from datetime import datetime
+
+# Define your PostgreSQL connection parameters
+dbname = ''
+user = ''
+password = '!!!'  # You might not need this if using a .pgpass file
+host = '127.0.0.1'  # e.g., 'localhost' or IP address
+port = '5432'  # e.g., '5432'
+
+# List of tables to check
+tables = [
+    ""
+]
+
+
+# Log file path
+log_file = r"C:\Users\Administrator\Documents\Py scripts\MASTER\logs\size_log.txt"
+
+# Connect to PostgreSQL
+conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
+cur = conn.cursor()
+
+# Function to execute query and return result
+def get_table_size(table_name):
+    query = f"SELECT pg_size_pretty(pg_relation_size('\"{table_name}\"'));"
+    cur.execute(query)
+    result = cur.fetchone()[0]
+    return result
+
+# Retry function with exponential backoff
+def retry_fetch_size(table_name, retries=3, delay=1):
+    attempt = 0
+    while attempt < retries:
+        try:
+            size = get_table_size(table_name)
+            return size
+        except psycopg2.Error as e:
+            log_message = f"{datetime.now()} - Error fetching size for table {table_name}: {e}\n"
+            with open(log_file, 'a') as f:
+                f.write(log_message)
+            attempt += 1
+            time.sleep(delay * 2 ** attempt)  # Exponential backoff
+    log_message = f"{datetime.now()} - Failed to fetch size for table {table_name} after {retries} attempts.\n"
+    with open(log_file, 'a') as f:
+        f.write(log_message)
+    return None
+
+
+
+for table in tables:
+    size = retry_fetch_size(table)
+    if size is not None:
+        result_line = f"{datetime.now()} - Table: {table}, Size: {size}\n"
+        with open(log_file, 'a') as f:
+            f.write(result_line)
+
+
+
+# Close cursor and connection
+cur.close()
+conn.close()
